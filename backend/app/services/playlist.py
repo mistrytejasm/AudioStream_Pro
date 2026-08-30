@@ -1,5 +1,7 @@
-﻿import asyncio
+﻿import os
+import asyncio
 import logging
+from pathlib import Path
 from urllib.parse import urlparse
 import ipaddress
 import socket
@@ -40,6 +42,23 @@ def detect_platform(url: str) -> Platform:
     if any(d in u for d in ["facebook.com", "fb.watch", "fb.com", "fb.me"]):
         return Platform.FACEBOOK
     return Platform.GENERIC
+
+def get_cookies_filepath() -> Optional[str]:
+    # 1. Direct file path from env
+    if settings.YOUTUBE_COOKIES_FILE and Path(settings.YOUTUBE_COOKIES_FILE).exists():
+        return settings.YOUTUBE_COOKIES_FILE
+
+    # 2. Local cookies.txt file
+    if settings.COOKIES_TXT_PATH.exists() and settings.COOKIES_TXT_PATH.stat().st_size > 10:
+        return str(settings.COOKIES_TXT_PATH)
+
+    # 3. Cookies content passed via YOUTUBE_COOKIES env var
+    if settings.YOUTUBE_COOKIES and len(settings.YOUTUBE_COOKIES.strip()) > 10:
+        target_path = settings.TEMP_DIR / "yt_cookies.txt"
+        target_path.write_text(settings.YOUTUBE_COOKIES.strip(), encoding="utf-8")
+        return str(target_path)
+
+    return None
 
 def format_duration(seconds: Optional[float]) -> str:
     if not seconds or seconds < 0:
@@ -82,21 +101,35 @@ def get_resolution_label(height: int, fps: Optional[int] = None) -> (str, str):
 
 class MultiPlatformAnalyzerService:
     @staticmethod
-    def _extract_with_opts(url: str, client_list: Optional[List[str]] = None) -> Dict[str, Any]:
-        ydl_opts = {
-            'extract_flat': 'in_playlist' if detect_platform(url) == Platform.YOUTUBE else False,
+    def _extract_with_opts(url: str, client_name: Optional[str] = None) -> Dict[str, Any]:
+        cookie_file = get_cookies_filepath()
+        is_yt = (detect_platform(url) == Platform.YOUTUBE)
+
+        ydl_opts: Dict[str, Any] = {
+            'extract_flat': 'in_playlist' if is_yt else False,
             'skip_download': True,
             'quiet': True,
             'no_warnings': True,
             'playlistend': settings.MAX_PLAYLIST_ITEMS,
             'nocheckcertificate': True,
+            'socket_timeout': 30,
         }
 
-        if client_list:
-            ydl_opts['extractor_args'] = {
-                'youtube': {
-                    'player_client': client_list
+        if cookie_file:
+            ydl_opts['cookiefile'] = cookie_file
+
+        if is_yt:
+            # Configure headers & client spoofing
+            if client_name:
+                ydl_opts['extractor_args'] = {
+                    'youtube': {
+                        'player_client': [client_name],
+                        'skip': ['hls', 'dash'] if client_name in ['android_creator', 'ios'] else []
+                    }
                 }
+            ydl_opts['http_headers'] = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
             }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -109,27 +142,28 @@ class MultiPlatformAnalyzerService:
         info = None
         last_err = None
 
-        # Try multiple extraction strategies for cloud datacenter IPs:
-        # 1. Standard web extraction
-        # 2. Android + iOS fallback client
-        # 3. TV / Web embedded fallback client
-        strategies = [
-            None,
-            ['android', 'ios'],
-            ['tv_embedded', 'web_embedded']
-        ] if platform == Platform.YOUTUBE else [None]
+        # Try client strategies sequentially:
+        # 1. mweb (Mobile web - lightweight and lowest rate limit on cloud IPs)
+        # 2. web (Default desktop client)
+        # 3. ios (iOS app client)
+        # 4. android (Android client)
+        # 5. tv_embedded (YouTube TV embedded)
+        strategies = ['mweb', 'web', 'ios', 'android', 'tv_embedded'] if platform == Platform.YOUTUBE else [None]
 
-        for strat in strategies:
+        for client in strategies:
             try:
-                info = cls._extract_with_opts(url, strat)
+                info = cls._extract_with_opts(url, client_name=client)
                 if info:
                     break
             except Exception as e:
                 last_err = e
-                logger.warning(f"Strategy {strat} failed: {e}. Trying next fallback...")
+                logger.warning(f"Strategy {client} failed for {url}: {e}. Trying fallback...")
 
         if not info:
-            raise ValueError(f"Could not analyze video or playlist. YouTube may be requiring bot verification on this datacenter IP. Detail: {last_err}")
+            raise ValueError(
+                "YouTube has placed a bot verification check on this server's IP address. "
+                "To resolve this on cloud platforms like Render, export your YouTube cookies using the 'Get cookies.txt LOCALLY' browser extension and set the YOUTUBE_COOKIES environment variable in your Render dashboard."
+            )
 
         is_playlist = (info.get('_type') == 'playlist' or 'entries' in info) and len(info.get('entries', [])) > 1
 
