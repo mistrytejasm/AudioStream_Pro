@@ -129,15 +129,14 @@ class JobManager:
 
             raw_download_path = job_temp_dir / f"raw_{track.id}.%(ext)s"
             
-            # Format selection string for yt-dlp across platforms
             if is_video_mode:
                 if format_val.endswith("p"):
                     height = format_val[:-1]
-                    fmt_spec = f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best"
+                    fmt_spec = f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/bestvideo+bestaudio/best"
                 else:
                     fmt_spec = "bestvideo+bestaudio/best"
             else:
-                fmt_spec = "bestaudio/best"
+                fmt_spec = "bestaudio/bestaudio*/best"
 
             cookie_file = get_cookies_filepath()
             ydl_opts = {
@@ -148,11 +147,6 @@ class JobManager:
                 'socket_timeout': 45,
                 'nocheckcertificate': True,
                 'ignoreerrors': False,
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['android', 'web']
-                    }
-                }
             }
             if cookie_file:
                 ydl_opts['cookiefile'] = cookie_file
