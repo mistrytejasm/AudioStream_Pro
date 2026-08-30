@@ -1,0 +1,12 @@
+﻿services:
+  - type: web
+    name: audiostream-pro
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: 8000
