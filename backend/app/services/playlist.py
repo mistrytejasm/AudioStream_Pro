@@ -1,4 +1,4 @@
-﻿import os
+import os
 import asyncio
 import logging
 from pathlib import Path
@@ -44,15 +44,26 @@ def detect_platform(url: str) -> Platform:
     return Platform.GENERIC
 
 def get_cookies_filepath() -> Optional[str]:
-    # 1. Direct file path from env
+    # 1. Render Secret Files mounted at /etc/secrets/
+    render_secret_candidates = [
+        Path("/etc/secrets/cookies"),
+        Path("/etc/secrets/cookies.txt"),
+        Path("/etc/secrets/yt_cookies.txt"),
+        Path("/etc/secrets/youtube_cookies.txt")
+    ]
+    for p in render_secret_candidates:
+        if p.exists() and p.stat().st_size > 10:
+            return str(p)
+
+    # 2. Direct file path from env
     if settings.YOUTUBE_COOKIES_FILE and Path(settings.YOUTUBE_COOKIES_FILE).exists():
         return settings.YOUTUBE_COOKIES_FILE
 
-    # 2. Local cookies.txt file
+    # 3. Local cookies.txt file in workspace root
     if settings.COOKIES_TXT_PATH.exists() and settings.COOKIES_TXT_PATH.stat().st_size > 10:
         return str(settings.COOKIES_TXT_PATH)
 
-    # 3. Cookies content passed via YOUTUBE_COOKIES env var
+    # 4. Cookies content passed via YOUTUBE_COOKIES env var
     if settings.YOUTUBE_COOKIES and len(settings.YOUTUBE_COOKIES.strip()) > 10:
         target_path = settings.TEMP_DIR / "yt_cookies.txt"
         target_path.write_text(settings.YOUTUBE_COOKIES.strip(), encoding="utf-8")

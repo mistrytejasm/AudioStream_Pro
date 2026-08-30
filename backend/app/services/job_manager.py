@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import logging
 import uuid
 from pathlib import Path
@@ -10,6 +10,7 @@ from app.models.job import JobState, TrackProgress, ItemStatus, JobStatus, Creat
 from app.services.converter import converter
 from app.services.tagger import tagger, sanitize_filename
 from app.services.packager import packager
+from app.services.playlist import get_cookies_filepath
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +139,7 @@ class JobManager:
             else:
                 fmt_spec = "bestaudio/best"
 
+            cookie_file = get_cookies_filepath()
             ydl_opts = {
                 'format': fmt_spec,
                 'outtmpl': str(raw_download_path),
@@ -152,6 +154,8 @@ class JobManager:
                     }
                 }
             }
+            if cookie_file:
+                ydl_opts['cookiefile'] = cookie_file
             
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(
