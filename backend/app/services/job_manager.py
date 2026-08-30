@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 import yt_dlp
 
 from app.config import settings
-from app.models.job import JobState, TrackProgress, ItemStatus, JobStatus, OutputFormat, CreateJobRequest, TrackSelection, MediaType
+from app.models.job import JobState, TrackProgress, ItemStatus, JobStatus, CreateJobRequest, TrackSelection, MediaType, Platform
 from app.services.converter import converter
 from app.services.tagger import tagger, sanitize_filename
 from app.services.packager import packager
@@ -62,6 +62,7 @@ class JobManager:
 
         job = JobState(
             job_id=job_id,
+            platform=req.platform,
             media_type=req.media_type,
             playlist_title=req.playlist_title,
             format=req.format,
@@ -73,7 +74,7 @@ class JobManager:
         )
         self._jobs[job_id] = job
         self._job_requests[job_id] = req
-        logger.info(f"Created Job [{job_id}] (Type: {req.media_type}, Format: {req.format}) for '{req.playlist_title}' with {len(req.tracks)} tracks")
+        logger.info(f"Created Job [{job_id}] (Platform: {req.platform}, Type: {req.media_type}, Format: {req.format}) for '{req.playlist_title}'")
         
         asyncio.create_task(self._process_job(job_id, req))
         return job
@@ -127,7 +128,7 @@ class JobManager:
 
             raw_download_path = job_temp_dir / f"raw_{track.id}.%(ext)s"
             
-            # Format selection string for yt-dlp
+            # Format selection string for yt-dlp across platforms
             if is_video_mode:
                 if format_val.endswith("p"):
                     height = format_val[:-1]
@@ -142,7 +143,7 @@ class JobManager:
                 'outtmpl': str(raw_download_path),
                 'quiet': True,
                 'no_warnings': True,
-                'socket_timeout': 30,
+                'socket_timeout': 45,
                 'nocheckcertificate': True,
                 'ignoreerrors': False,
                 'extractor_args': {
@@ -169,14 +170,14 @@ class JobManager:
             await self.broadcast(job_id)
             
             if is_video_mode:
-                logger.info(f"[{track.position}/{total_count}] Step 2/4: Muxing/Encoding Video MP4...")
+                logger.info(f"[{track.position}/{total_count}] Step 2/4: Muxing Video MP4 with FFmpeg...")
                 converted_file = await converter.convert_and_mux_video(
                     input_path=acquired_file,
                     output_dir=job_output_dir,
                     base_filename=base_filename
                 )
             else:
-                logger.info(f"[{track.position}/{total_count}] Step 2/4: Encoding Audio {format_val.upper()}...")
+                logger.info(f"[{track.position}/{total_count}] Step 2/4: Encoding Audio {format_val.upper()} with FFmpeg...")
                 converted_file = await converter.convert_to_audio(
                     input_path=acquired_file,
                     output_format=format_val,

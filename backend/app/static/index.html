@@ -39,9 +39,38 @@
 
   <main class="w-full max-w-4xl space-y-6">
 
-    <!-- STEP 1: Input URL Card -->
-    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-      <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3">1. Enter Playlist URL</h2>
+    <!-- STEP 1: Platform Hub & URL Input -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm space-y-5">
+      
+      <!-- Platform Selector Hub -->
+      <div>
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Choose Platform or Paste Any URL Below</label>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="platformButtons">
+          
+          <button type="button" onclick="selectPlatform('youtube')" id="btn_plat_youtube" class="platform-tab flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-950/80 border border-slate-700/80 hover:border-red-500/50 rounded-xl text-xs font-bold transition-all text-slate-200 hover:text-white">
+            <svg class="w-4 h-4 text-red-500 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            YouTube
+          </button>
+
+          <button type="button" onclick="selectPlatform('instagram')" id="btn_plat_instagram" class="platform-tab flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-950/80 border border-slate-700/80 hover:border-pink-500/50 rounded-xl text-xs font-bold transition-all text-slate-200 hover:text-white">
+            <svg class="w-4 h-4 text-pink-500 fill-current" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            Instagram
+          </button>
+
+          <button type="button" onclick="selectPlatform('twitter')" id="btn_plat_twitter" class="platform-tab flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-950/80 border border-slate-700/80 hover:border-sky-500/50 rounded-xl text-xs font-bold transition-all text-slate-200 hover:text-white">
+            <svg class="w-4 h-4 text-white fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            X (Twitter)
+          </button>
+
+          <button type="button" onclick="selectPlatform('facebook')" id="btn_plat_facebook" class="platform-tab flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-950/80 border border-slate-700/80 hover:border-blue-500/50 rounded-xl text-xs font-bold transition-all text-slate-200 hover:text-white">
+            <svg class="w-4 h-4 text-blue-500 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            Facebook
+          </button>
+
+        </div>
+      </div>
+
+      <!-- URL Input Field -->
       <div class="flex flex-col sm:flex-row gap-3">
         <div class="relative flex-1">
           <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -52,14 +81,14 @@
           <input 
             type="url" 
             id="playlistUrl" 
-            placeholder="Paste YouTube playlist or video URL here..." 
-            class="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
+            placeholder="Paste YouTube, Instagram, X, or Facebook URL here..." 
+            class="w-full pl-10 pr-4 py-3.5 bg-slate-950/80 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
           />
         </div>
         <button 
           id="analyzeBtn" 
           onclick="analyzePlaylist()" 
-          class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-medium rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+          class="px-7 py-3.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
         >
           <span id="analyzeSpinner" class="hidden">
             <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -67,7 +96,7 @@
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
           </span>
-          <span id="analyzeText">Analyze Playlist</span>
+          <span id="analyzeText">Analyze Link</span>
         </button>
       </div>
       <div id="analyzeError" class="hidden mt-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 flex items-center gap-2">
@@ -78,82 +107,50 @@
       </div>
     </section>
 
-    <!-- STEP 2A: SINGLE VIDEO REVIEW & QUALITY SELECTION -->
+    <!-- STEP 2A: MULTI-PLATFORM MEDIA REVIEW & QUALITY MATRIX -->
     <section id="singleReviewSection" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
       
       <!-- Video Metadata Header Card -->
-      <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center pb-4 border-b border-slate-800">
-        <div class="relative w-full sm:w-44 aspect-video bg-slate-950 rounded-xl overflow-hidden shrink-0 border border-slate-800">
+      <div class="flex flex-col sm:flex-row gap-5 items-start sm:items-center pb-5 border-b border-slate-800">
+        <div class="relative w-full sm:w-48 aspect-video bg-slate-950 rounded-xl overflow-hidden shrink-0 border border-slate-800">
           <img id="singleThumbnail" src="" alt="Thumbnail" class="w-full h-full object-cover">
           <span id="singleDurationBadge" class="absolute bottom-1.5 right-1.5 bg-black/80 text-white font-mono text-[10px] px-1.5 py-0.5 rounded">0:00</span>
         </div>
-        <div class="flex-1 min-w-0">
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-1.5">Single Video</span>
+        <div class="flex-1 min-w-0 space-y-1">
+          <div class="flex items-center gap-2">
+            <span id="platformBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              Platform
+            </span>
+            <span class="text-xs text-slate-500">•</span>
+            <span id="singleChannelDisplay" class="text-xs text-slate-400 font-medium">Channel Name</span>
+          </div>
           <h2 id="singleTitleDisplay" class="text-base sm:text-lg font-bold text-white leading-snug line-clamp-2">Title</h2>
-          <p id="singleChannelDisplay" class="text-xs text-slate-400 mt-1">Channel Name</p>
         </div>
       </div>
 
-      <!-- Quality Selection (Dual Section: Video & Audio) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Quality Options Matrix Table -->
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Select Download Quality & Format
+        </h3>
         
-        <!-- Video Qualities -->
-        <div class="space-y-3">
-          <div class="flex items-center gap-2">
-            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Video Formats (MP4)</h3>
-          </div>
-          <div class="space-y-2" id="videoOptionsContainer">
-            <!-- Dynamic Video Formats -->
-          </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border border-slate-800 rounded-xl overflow-hidden">
+            <thead class="bg-slate-950/80 text-slate-400 uppercase font-semibold border-b border-slate-800">
+              <tr>
+                <th class="py-3 px-4">Quality / Resolution</th>
+                <th class="py-3 px-4">Format</th>
+                <th class="py-3 px-4">File Size</th>
+                <th class="py-3 px-4">Type</th>
+                <th class="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="qualityMatrixBody" class="divide-y divide-slate-800/60 bg-slate-950/30">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
         </div>
-
-        <!-- Audio Qualities -->
-        <div class="space-y-3">
-          <div class="flex items-center gap-2">
-            <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Audio Formats (High Fidelity)</h3>
-          </div>
-          <div class="space-y-2">
-            
-            <label class="relative flex items-start p-3 bg-slate-950/60 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/5 text-xs">
-              <input type="radio" name="selectedFormat" value="m4a" checked class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
-              <div class="ml-2.5 flex-1">
-                <div class="flex justify-between items-center">
-                  <span class="font-bold text-white flex items-center gap-1.5">
-                    M4A (AAC)
-                    <span class="text-[9px] bg-indigo-500/20 text-indigo-300 font-medium px-1.5 py-0.2 rounded-full border border-indigo-500/30">Apple / iPhone</span>
-                  </span>
-                  <span class="text-[10px] text-slate-400 font-mono">256 kbps</span>
-                </div>
-                <span class="text-[11px] text-slate-400 block mt-0.5">Optimized AAC with faststart streaming atom and tags.</span>
-              </div>
-            </label>
-
-            <label class="relative flex items-start p-3 bg-slate-950/60 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/5 text-xs">
-              <input type="radio" name="selectedFormat" value="mp3" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
-              <div class="ml-2.5 flex-1">
-                <div class="flex justify-between items-center">
-                  <span class="font-bold text-white">MP3 (320 kbps CBR)</span>
-                  <span class="text-[10px] text-slate-400 font-mono">Universal</span>
-                </div>
-                <span class="text-[11px] text-slate-400 block mt-0.5">Maximum quality MP3 with embedded ID3v2.4 tags and art.</span>
-              </div>
-            </label>
-
-          </div>
-        </div>
-
-      </div>
-
-      <div class="flex justify-end pt-2">
-        <button 
-          onclick="startSingleDownload()" 
-          class="px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-[0.98] text-white font-bold rounded-xl text-sm transition-all flex items-center gap-2 shadow-xl shadow-indigo-600/30 cursor-pointer"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-          Download & Convert Video / Audio
-        </button>
       </div>
 
     </section>
@@ -273,6 +270,28 @@
     let currentMediaData = null;
     let activeEventSource = null;
     let currentJobId = null;
+    let selectedPlatformHint = 'youtube';
+
+    function selectPlatform(platform) {
+      selectedPlatformHint = platform;
+      document.querySelectorAll('.platform-tab').forEach(btn => {
+        btn.classList.remove('border-indigo-500', 'bg-indigo-500/10', 'text-white');
+        btn.classList.add('border-slate-700/80', 'bg-slate-950/80', 'text-slate-200');
+      });
+
+      const activeBtn = document.getElementById(`btn_plat_${platform}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('border-slate-700/80', 'bg-slate-950/80', 'text-slate-200');
+        activeBtn.classList.add('border-indigo-500', 'bg-indigo-500/10', 'text-white');
+      }
+
+      const input = document.getElementById('playlistUrl');
+      if (platform === 'youtube') input.placeholder = 'Paste YouTube video or playlist URL here...';
+      else if (platform === 'instagram') input.placeholder = 'Paste Instagram Reel or Post URL here...';
+      else if (platform === 'twitter') input.placeholder = 'Paste X (Twitter) video URL here...';
+      else if (platform === 'facebook') input.placeholder = 'Paste Facebook video URL here...';
+      input.focus();
+    }
 
     async function analyzePlaylist() {
       const urlInput = document.getElementById('playlistUrl');
@@ -285,7 +304,7 @@
 
       if (!url) {
         errBox.classList.remove('hidden');
-        errMsg.textContent = 'Please enter a valid URL.';
+        errMsg.textContent = 'Please enter a valid video or playlist URL.';
         return;
       }
 
@@ -298,7 +317,7 @@
         const res = await fetch('/api/v1/playlists/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url })
+          body: JSON.stringify({ url, platform_hint: selectedPlatformHint })
         });
 
         if (!res.ok) {
@@ -318,7 +337,7 @@
         errMsg.textContent = err.message || 'An error occurred during analysis.';
       } finally {
         spinner.classList.add('hidden');
-        btnText.textContent = 'Analyze URL';
+        btnText.textContent = 'Analyze Link';
         analyzeBtn.disabled = false;
       }
     }
@@ -329,24 +348,49 @@
       document.getElementById('singleThumbnail').src = data.thumbnail || '';
       document.getElementById('singleDurationBadge').textContent = data.duration_string || '0:00';
 
-      const videoContainer = document.getElementById('videoOptionsContainer');
-      videoContainer.innerHTML = '';
+      const pBadge = document.getElementById('platformBadge');
+      const plat = (data.platform || 'video').toUpperCase();
+      pBadge.textContent = plat;
+      if (data.platform === 'youtube') pBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20';
+      else if (data.platform === 'instagram') pBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-pink-500/10 text-pink-400 border border-pink-500/20';
+      else if (data.platform === 'twitter') pBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-sky-500/10 text-sky-400 border border-sky-500/20';
+      else if (data.platform === 'facebook') pBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20';
+      else pBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
 
-      if (data.available_video_formats && data.available_video_formats.length > 0) {
-        data.available_video_formats.forEach((fmt) => {
-          const lbl = document.createElement('label');
-          lbl.className = 'relative flex items-start p-3 bg-slate-950/60 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/5 text-xs';
-          lbl.innerHTML = `
-            <input type="radio" name="selectedFormat" value="${fmt.format_id}" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
-            <div class="ml-2.5 flex-1">
-              <div class="flex justify-between items-center">
-                <span class="font-bold text-white">${fmt.resolution}</span>
-                <span class="text-[10px] text-slate-400 font-mono">${fmt.filesize_approx || ''}</span>
-              </div>
-              <span class="text-[11px] text-slate-400 block mt-0.5">${fmt.note}</span>
-            </div>
+      const matrixBody = document.getElementById('qualityMatrixBody');
+      matrixBody.innerHTML = '';
+
+      if (data.quality_options && data.quality_options.length > 0) {
+        data.quality_options.forEach((opt) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-900/60 transition-colors';
+          const isAudio = opt.type === 'audio_only';
+          const typeBadge = isAudio 
+            ? '<span class="px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">Audio Only</span>'
+            : '<span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Video + Audio</span>';
+
+          tr.innerHTML = `
+            <td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+              ${isAudio ? '🎵' : '🎬'} 
+              <span>${opt.label || opt.resolution}</span>
+              ${opt.resolution.includes('2160') || opt.label.includes('4K') ? '<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-extrabold border border-amber-500/30">4K UHD</span>' : ''}
+              ${opt.resolution.includes('1440') || opt.label.includes('2K') ? '<span class="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-extrabold border border-sky-500/30">2K QHD</span>' : ''}
+              ${opt.resolution.includes('1080') ? '<span class="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/30">FHD</span>' : ''}
+              <span class="text-[10px] text-slate-500 font-normal">(${opt.note || ''})</span>
+            </td>
+            <td class="py-3.5 px-4 font-mono uppercase text-slate-300">${opt.ext}</td>
+            <td class="py-3.5 px-4 font-mono text-slate-400">${opt.filesize_approx || 'Dynamic'}</td>
+            <td class="py-3.5 px-4">${typeBadge}</td>
+            <td class="py-3.5 px-4 text-right">
+              <button 
+                onclick="triggerDirectDownload('${opt.format_id}')"
+                class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.97] text-white font-bold rounded-lg text-xs transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
+              >
+                Download ${opt.ext.toUpperCase()}
+              </button>
+            </td>
           `;
-          videoContainer.appendChild(lbl);
+          matrixBody.appendChild(tr);
         });
       }
 
@@ -384,16 +428,16 @@
       document.getElementById('progressSection').classList.add('hidden');
     }
 
-    async function startSingleDownload() {
+    async function triggerDirectDownload(formatId) {
       if (!currentMediaData) return;
-      const selectedFormat = document.querySelector('input[name="selectedFormat"]:checked').value;
       const track = currentMediaData.items[0];
 
       const payload = {
+        platform: currentMediaData.platform || "generic",
         media_type: "single",
         playlist_id: currentMediaData.id,
         playlist_title: currentMediaData.title,
-        format: selectedFormat,
+        format: formatId,
         tracks: [{
           id: track.id,
           title: track.title,
