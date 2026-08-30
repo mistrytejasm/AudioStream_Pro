@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 import yt_dlp
 
 from app.config import settings
-from app.models.job import JobState, TrackProgress, ItemStatus, JobStatus, OutputFormat, CreateJobRequest, TrackSelection
+from app.models.job import JobState, TrackProgress, ItemStatus, JobStatus, OutputFormat, CreateJobRequest, TrackSelection, MediaType
 from app.services.converter import converter
 from app.services.tagger import tagger, sanitize_filename
 from app.services.packager import packager
@@ -62,6 +62,7 @@ class JobManager:
 
         job = JobState(
             job_id=job_id,
+            media_type=req.media_type,
             playlist_title=req.playlist_title,
             format=req.format,
             status=JobStatus.QUEUED,
@@ -72,23 +73,23 @@ class JobManager:
         )
         self._jobs[job_id] = job
         self._job_requests[job_id] = req
-        logger.info(f"Created Job [{job_id}] for playlist '{req.playlist_title}' with {len(req.tracks)} tracks (Format: {req.format.value})")
+        logger.info(f"Created Job [{job_id}] (Type: {req.media_type}, Format: {req.format}) for '{req.playlist_title}' with {len(req.tracks)} tracks")
         
         asyncio.create_task(self._process_job(job_id, req))
         return job
 
     def repackage_zip(self, job_id: str):
         job = self._jobs.get(job_id)
-        if not job:
+        if not job or job.media_type == MediaType.SINGLE:
             return
         job_output_dir = settings.OUTPUT_DIR / job_id
-        audio_files = list(job_output_dir.glob("*.m4a")) + list(job_output_dir.glob("*.mp3"))
-        if audio_files:
-            zip_filename = f"{sanitize_filename(job.playlist_title)}_{job.format.value.upper()}.zip"
+        media_files = list(job_output_dir.glob("*.m4a")) + list(job_output_dir.glob("*.mp3")) + list(job_output_dir.glob("*.mp4"))
+        if media_files:
+            zip_filename = f"{sanitize_filename(job.playlist_title)}_{job.format.upper()}.zip"
             zip_path = job_output_dir / zip_filename
-            packager.create_zip(audio_files, zip_path)
+            packager.create_zip(media_files, zip_path)
             job.zip_download_url = f"/api/v1/jobs/{job_id}/download"
-            logger.info(f"✓ ZIP package updated with {len(audio_files)} files at {zip_path.name}")
+            logger.info(f"✓ ZIP package updated with {len(media_files)} files at {zip_path.name}")
 
     async def _execute_single_track(
         self,
@@ -101,10 +102,12 @@ class JobManager:
     ) -> bool:
         job = self._jobs[job_id]
         track_progress = job.tracks[track.id]
-        track_num_str = f"{track.position:02d}"
+        track_num_str = f"{track.position:02d}" if total_count > 1 else ""
         safe_artist = sanitize_filename(track.uploader)
         safe_title = sanitize_filename(track.title)
-        base_filename = f"{track_num_str} - {safe_artist} - {safe_title}"
+        
+        base_filename = f"{track_num_str} - {safe_artist} - {safe_title}" if total_count > 1 else f"{safe_artist} - {safe_title}"
+        base_filename = base_filename.strip(" -")
         download_url = target_url or track.url
 
         job_temp_dir = settings.TEMP_DIR / job_id
@@ -112,18 +115,30 @@ class JobManager:
         job_temp_dir.mkdir(parents=True, exist_ok=True)
         job_output_dir.mkdir(parents=True, exist_ok=True)
 
+        is_video_mode = any(v in format_val.lower() for v in ["p", "video", "mp4"])
+
         try:
             # 1. ACQUIRING
             track_progress.status = ItemStatus.ACQUIRING
             track_progress.progress = 15
             track_progress.error = None
             await self.broadcast(job_id)
-            logger.info(f"[{track.position}/{total_count}] Step 1/4: Downloading audio from {download_url}...")
+            logger.info(f"[{track.position}/{total_count}] Step 1/4: Downloading source from {download_url}...")
 
             raw_download_path = job_temp_dir / f"raw_{track.id}.%(ext)s"
             
+            # Format selection string for yt-dlp
+            if is_video_mode:
+                if format_val.endswith("p"):
+                    height = format_val[:-1]
+                    fmt_spec = f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best"
+                else:
+                    fmt_spec = "bestvideo+bestaudio/best"
+            else:
+                fmt_spec = "bestaudio/best"
+
             ydl_opts = {
-                'format': 'bestaudio/best',
+                'format': fmt_spec,
                 'outtmpl': str(raw_download_path),
                 'quiet': True,
                 'no_warnings': True,
@@ -148,19 +163,27 @@ class JobManager:
                 raise RuntimeError("Download completed but input file was not found on disk")
             acquired_file = downloaded_files[0]
 
-            # 2. CONVERTING
+            # 2. CONVERTING / MUXING
             track_progress.status = ItemStatus.CONVERTING
             track_progress.progress = 50
             await self.broadcast(job_id)
-            logger.info(f"[{track.position}/{total_count}] Step 2/4: Encoding to {format_val.upper()} with FFmpeg...")
-
-            converted_file = await converter.convert_to_audio(
-                input_path=acquired_file,
-                output_format=format_val,
-                output_dir=job_output_dir,
-                base_filename=base_filename,
-                expected_duration=track.duration if track.duration > 0 else None
-            )
+            
+            if is_video_mode:
+                logger.info(f"[{track.position}/{total_count}] Step 2/4: Muxing/Encoding Video MP4...")
+                converted_file = await converter.convert_and_mux_video(
+                    input_path=acquired_file,
+                    output_dir=job_output_dir,
+                    base_filename=base_filename
+                )
+            else:
+                logger.info(f"[{track.position}/{total_count}] Step 2/4: Encoding Audio {format_val.upper()}...")
+                converted_file = await converter.convert_to_audio(
+                    input_path=acquired_file,
+                    output_format=format_val,
+                    output_dir=job_output_dir,
+                    base_filename=base_filename,
+                    expected_duration=track.duration if track.duration > 0 else None
+                )
 
             acquired_file.unlink(missing_ok=True)
 
@@ -169,20 +192,20 @@ class JobManager:
             track_progress.progress = 80
             await self.broadcast(job_id)
 
-            # 4. TAGGING
-            track_progress.status = ItemStatus.TAGGING
-            track_progress.progress = 90
-            await self.broadcast(job_id)
-
-            await tagger.tag_file(
-                file_path=converted_file,
-                title=track.title,
-                artist=track.uploader,
-                album=playlist_title,
-                track_number=track.position,
-                total_tracks=total_count,
-                cover_url=track.thumbnail
-            )
+            # 4. TAGGING (Audio files)
+            if not is_video_mode:
+                track_progress.status = ItemStatus.TAGGING
+                track_progress.progress = 90
+                await self.broadcast(job_id)
+                await tagger.tag_file(
+                    file_path=converted_file,
+                    title=track.title,
+                    artist=track.uploader,
+                    album=playlist_title,
+                    track_number=track.position,
+                    total_tracks=total_count,
+                    cover_url=track.thumbnail
+                )
 
             # 5. COMPLETED
             was_failed = (track_progress.status == ItemStatus.FAILED)
@@ -193,13 +216,13 @@ class JobManager:
             if was_failed and job.failed_tracks > 0:
                 job.failed_tracks -= 1
                 
-            logger.info(f"[{track.position}/{total_count}] ✓ Finished track: '{track.title}'")
+            logger.info(f"[{track.position}/{total_count}] ✓ Finished {track.title}")
             await self.broadcast(job_id)
             return True
 
         except Exception as e:
             err_clean = str(e).replace('\n', ' ')
-            logger.warning(f"[{track.position}/{total_count}] ✕ Failed track '{track.title}': {err_clean}")
+            logger.warning(f"[{track.position}/{total_count}] ✕ Failed {track.title}: {err_clean}")
             track_progress.status = ItemStatus.FAILED
             track_progress.error = err_clean
             job.failed_tracks += 1
@@ -216,7 +239,7 @@ class JobManager:
             await self._execute_single_track(
                 job_id=job_id,
                 track=track,
-                format_val=req.format.value,
+                format_val=req.format,
                 playlist_title=req.playlist_title,
                 total_count=total_count
             )
@@ -234,16 +257,15 @@ class JobManager:
 
         matching_track = next((t for t in req.tracks if t.id == track_id), None)
         if not matching_track:
-            raise ValueError("Track not found in job")
+            raise ValueError("Track not found")
 
-        # If previous status was FAILED, decrement to prevent double counting
         if job.tracks[track_id].status == ItemStatus.FAILED and job.failed_tracks > 0:
             job.failed_tracks -= 1
 
         success = await self._execute_single_track(
             job_id=job_id,
             track=matching_track,
-            format_val=job.format.value,
+            format_val=job.format,
             playlist_title=job.playlist_title,
             total_count=job.total_tracks,
             target_url=custom_url
@@ -264,21 +286,14 @@ class JobManager:
         if not matching_track:
             raise ValueError("Track not found")
 
-        # Auto search alternative YouTube upload
         search_query = f"ytsearch1:{matching_track.uploader} - {matching_track.title} audio"
-        logger.info(f"Auto-resolving track {matching_track.title} with query '{search_query}'...")
-
         track_progress = job.tracks[track_id]
         track_progress.status = ItemStatus.ACQUIRING
         track_progress.error = "Searching alternative source..."
         await self.broadcast(job_id)
 
         try:
-            ydl_opts = {
-                'quiet': True,
-                'no_warnings': True,
-                'extract_flat': True
-            }
+            ydl_opts = {'quiet': True, 'no_warnings': True, 'extract_flat': True}
             loop = asyncio.get_running_loop()
             info = await loop.run_in_executor(
                 None,
@@ -286,11 +301,9 @@ class JobManager:
             )
             entries = info.get('entries') or []
             if not entries or not entries[0]:
-                raise RuntimeError("No alternative audio source found on search")
+                raise RuntimeError("No alternative audio source found")
 
             best_match_url = entries[0].get('url') or f"https://www.youtube.com/watch?v={entries[0].get('id')}"
-            logger.info(f"Found candidate alternative stream for '{matching_track.title}': {best_match_url}")
-
             await self.retry_track(job_id, track_id, custom_url=best_match_url)
             return True
         except Exception as e:
