@@ -56,9 +56,9 @@ class MediaConverter:
                 str(output_file)
             ]
         else:
-            raise MediaConversionError(f"Unsupported format: {output_format}")
+            raise MediaConversionError(f"Unsupported audio format: {output_format}")
 
-        logger.info(f"Running FFmpeg conversion for {input_path.name} -> {output_file.name}")
+        logger.info(f"Running FFmpeg audio conversion for {input_path.name} -> {output_file.name}")
         
         loop = asyncio.get_running_loop()
         ret_code, stdout, stderr = await loop.run_in_executor(
@@ -67,7 +67,7 @@ class MediaConverter:
         )
 
         if ret_code != 0:
-            raise MediaConversionError(f"FFmpeg error (code {ret_code}): {stderr}")
+            raise MediaConversionError(f"FFmpeg audio error (code {ret_code}): {stderr}")
 
         # Strict validation
         try:
@@ -82,6 +82,59 @@ class MediaConverter:
             if output_file.exists():
                 output_file.unlink(missing_ok=True)
             raise MediaConversionError(f"Output validation failed: {e}")
+
+        return output_file
+
+    async def convert_and_mux_video(
+        self,
+        input_path: Path,
+        output_dir: Path,
+        base_filename: str
+    ) -> Path:
+        output_file = output_dir / f"{base_filename}.mp4"
+        
+        # Mux to universal H.264 + AAC MP4 with faststart
+        cmd = [
+            self.ffmpeg_path,
+            "-y",
+            "-i", str(input_path),
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-movflags", "+faststart",
+            str(output_file)
+        ]
+
+        logger.info(f"Running FFmpeg video muxing for {input_path.name} -> {output_file.name}")
+        
+        loop = asyncio.get_running_loop()
+        ret_code, stdout, stderr = await loop.run_in_executor(
+            None,
+            lambda: run_sync_cmd(cmd, timeout=settings.FFMPEG_TIMEOUT_SECONDS)
+        )
+
+        # Fallback if stream copy fails
+        if ret_code != 0:
+            logger.warning("Fast stream-copy failed, falling back to full re-encode...")
+            fallback_cmd = [
+                self.ffmpeg_path,
+                "-y",
+                "-i", str(input_path),
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-crf", "22",
+                "-c:a", "aac",
+                "-b:a", "192k",
+                "-movflags", "+faststart",
+                str(output_file)
+            ]
+            ret_code, stdout, stderr = await loop.run_in_executor(
+                None,
+                lambda: run_sync_cmd(fallback_cmd, timeout=settings.FFMPEG_TIMEOUT_SECONDS)
+            )
+
+        if ret_code != 0 or not output_file.exists() or output_file.stat().st_size < 10240:
+            raise MediaConversionError(f"FFmpeg video conversion failed: {stderr}")
 
         return output_file
 

@@ -5,8 +5,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
-from app.models.job import AnalyzeRequest, CreateJobRequest, JobState
-from app.services.playlist import playlist_service, PlaylistMetadata
+from app.models.job import AnalyzeRequest, CreateJobRequest, JobState, MediaAnalysisResult
+from app.services.playlist import media_analyzer
 from app.services.job_manager import job_manager
 from app.config import settings
 
@@ -16,16 +16,16 @@ router = APIRouter()
 class SubstituteUrlRequest(BaseModel):
     url: str
 
-@router.post("/playlists/analyze", response_model=PlaylistMetadata)
-async def analyze_playlist(req: AnalyzeRequest):
+@router.post("/playlists/analyze", response_model=MediaAnalysisResult)
+async def analyze_media_url(req: AnalyzeRequest):
     try:
-        data = await playlist_service.analyze_playlist(req.url)
+        data = await media_analyzer.analyze_media(req.url)
         return data
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Error analyzing playlist: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to analyze playlist: {str(e)}")
+        logger.error(f"Error analyzing URL: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to analyze URL: {str(e)}")
 
 @router.post("/jobs", response_model=JobState)
 async def create_job(req: CreateJobRequest):
@@ -137,7 +137,14 @@ async def download_single_file(job_id: str, filename: str):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
 
-    media_type = "audio/mp4" if file_path.suffix.lower() == ".m4a" else "audio/mpeg"
+    ext = file_path.suffix.lower()
+    if ext == ".mp4":
+        media_type = "video/mp4"
+    elif ext == ".m4a":
+        media_type = "audio/mp4"
+    else:
+        media_type = "audio/mpeg"
+
     return FileResponse(
         path=file_path,
         media_type=media_type,

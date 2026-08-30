@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -78,8 +78,88 @@
       </div>
     </section>
 
-    <!-- STEP 2: Playlist Tracks & Format Selection -->
-    <section id="reviewSection" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+    <!-- STEP 2A: SINGLE VIDEO REVIEW & QUALITY SELECTION -->
+    <section id="singleReviewSection" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+      
+      <!-- Video Metadata Header Card -->
+      <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center pb-4 border-b border-slate-800">
+        <div class="relative w-full sm:w-44 aspect-video bg-slate-950 rounded-xl overflow-hidden shrink-0 border border-slate-800">
+          <img id="singleThumbnail" src="" alt="Thumbnail" class="w-full h-full object-cover">
+          <span id="singleDurationBadge" class="absolute bottom-1.5 right-1.5 bg-black/80 text-white font-mono text-[10px] px-1.5 py-0.5 rounded">0:00</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-1.5">Single Video</span>
+          <h2 id="singleTitleDisplay" class="text-base sm:text-lg font-bold text-white leading-snug line-clamp-2">Title</h2>
+          <p id="singleChannelDisplay" class="text-xs text-slate-400 mt-1">Channel Name</p>
+        </div>
+      </div>
+
+      <!-- Quality Selection (Dual Section: Video & Audio) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Video Qualities -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Video Formats (MP4)</h3>
+          </div>
+          <div class="space-y-2" id="videoOptionsContainer">
+            <!-- Dynamic Video Formats -->
+          </div>
+        </div>
+
+        <!-- Audio Qualities -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Audio Formats (High Fidelity)</h3>
+          </div>
+          <div class="space-y-2">
+            
+            <label class="relative flex items-start p-3 bg-slate-950/60 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/5 text-xs">
+              <input type="radio" name="selectedFormat" value="m4a" checked class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+              <div class="ml-2.5 flex-1">
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-white flex items-center gap-1.5">
+                    M4A (AAC)
+                    <span class="text-[9px] bg-indigo-500/20 text-indigo-300 font-medium px-1.5 py-0.2 rounded-full border border-indigo-500/30">Apple / iPhone</span>
+                  </span>
+                  <span class="text-[10px] text-slate-400 font-mono">256 kbps</span>
+                </div>
+                <span class="text-[11px] text-slate-400 block mt-0.5">Optimized AAC with faststart streaming atom and tags.</span>
+              </div>
+            </label>
+
+            <label class="relative flex items-start p-3 bg-slate-950/60 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/5 text-xs">
+              <input type="radio" name="selectedFormat" value="mp3" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+              <div class="ml-2.5 flex-1">
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-white">MP3 (320 kbps CBR)</span>
+                  <span class="text-[10px] text-slate-400 font-mono">Universal</span>
+                </div>
+                <span class="text-[11px] text-slate-400 block mt-0.5">Maximum quality MP3 with embedded ID3v2.4 tags and art.</span>
+              </div>
+            </label>
+
+          </div>
+        </div>
+
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button 
+          onclick="startSingleDownload()" 
+          class="px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-[0.98] text-white font-bold rounded-xl text-sm transition-all flex items-center gap-2 shadow-xl shadow-indigo-600/30 cursor-pointer"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Download & Convert Video / Audio
+        </button>
+      </div>
+
+    </section>
+
+    <!-- STEP 2B: PLAYLIST REVIEW & BATCH SELECTION -->
+    <section id="playlistReviewSection" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
         <div>
           <h2 class="text-lg font-bold text-white" id="playlistTitleDisplay">My Playlist</h2>
@@ -190,7 +270,7 @@
   </footer>
 
   <script>
-    let currentPlaylistData = null;
+    let currentMediaData = null;
     let activeEventSource = null;
     let currentJobId = null;
 
@@ -226,16 +306,53 @@
           throw new Error(errData.detail || 'Failed to analyze URL');
         }
 
-        currentPlaylistData = await res.json();
-        renderPlaylistReview(currentPlaylistData);
+        currentMediaData = await res.json();
+        
+        if (currentMediaData.type === 'single') {
+          renderSingleReview(currentMediaData);
+        } else {
+          renderPlaylistReview(currentMediaData);
+        }
       } catch (err) {
         errBox.classList.remove('hidden');
         errMsg.textContent = err.message || 'An error occurred during analysis.';
       } finally {
         spinner.classList.add('hidden');
-        btnText.textContent = 'Analyze Playlist';
+        btnText.textContent = 'Analyze URL';
         analyzeBtn.disabled = false;
       }
+    }
+
+    function renderSingleReview(data) {
+      document.getElementById('singleTitleDisplay').textContent = data.title;
+      document.getElementById('singleChannelDisplay').textContent = `${data.uploader} • Duration: ${data.duration_string || 'N/A'}`;
+      document.getElementById('singleThumbnail').src = data.thumbnail || '';
+      document.getElementById('singleDurationBadge').textContent = data.duration_string || '0:00';
+
+      const videoContainer = document.getElementById('videoOptionsContainer');
+      videoContainer.innerHTML = '';
+
+      if (data.available_video_formats && data.available_video_formats.length > 0) {
+        data.available_video_formats.forEach((fmt) => {
+          const lbl = document.createElement('label');
+          lbl.className = 'relative flex items-start p-3 bg-slate-950/60 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/5 text-xs';
+          lbl.innerHTML = `
+            <input type="radio" name="selectedFormat" value="${fmt.format_id}" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+            <div class="ml-2.5 flex-1">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-white">${fmt.resolution}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${fmt.filesize_approx || ''}</span>
+              </div>
+              <span class="text-[11px] text-slate-400 block mt-0.5">${fmt.note}</span>
+            </div>
+          `;
+          videoContainer.appendChild(lbl);
+        });
+      }
+
+      document.getElementById('singleReviewSection').classList.remove('hidden');
+      document.getElementById('playlistReviewSection').classList.add('hidden');
+      document.getElementById('progressSection').classList.add('hidden');
     }
 
     function renderPlaylistReview(data) {
@@ -262,16 +379,52 @@
         container.appendChild(div);
       });
 
-      document.getElementById('reviewSection').classList.remove('hidden');
+      document.getElementById('playlistReviewSection').classList.remove('hidden');
+      document.getElementById('singleReviewSection').classList.add('hidden');
       document.getElementById('progressSection').classList.add('hidden');
+    }
+
+    async function startSingleDownload() {
+      if (!currentMediaData) return;
+      const selectedFormat = document.querySelector('input[name="selectedFormat"]:checked').value;
+      const track = currentMediaData.items[0];
+
+      const payload = {
+        media_type: "single",
+        playlist_id: currentMediaData.id,
+        playlist_title: currentMediaData.title,
+        format: selectedFormat,
+        tracks: [{
+          id: track.id,
+          title: track.title,
+          url: track.url,
+          duration: track.duration,
+          uploader: track.uploader,
+          thumbnail: track.thumbnail,
+          position: 1
+        }]
+      };
+
+      try {
+        const res = await fetch('/api/v1/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Could not start download');
+        const job = await res.json();
+        startLiveProgressTracking(job.job_id, payload.tracks);
+      } catch (err) {
+        alert('Error starting download: ' + err.message);
+      }
     }
 
     function toggleSelectAll(select) {
       document.querySelectorAll('.track-chk').forEach(cb => cb.checked = select);
     }
 
-    async function startProcessing() {
-      if (!currentPlaylistData) return;
+    async function startPlaylistProcessing() {
+      if (!currentMediaData) return;
 
       const checkedBoxes = Array.from(document.querySelectorAll('.track-chk:checked'));
       if (checkedBoxes.length === 0) {
@@ -279,10 +432,10 @@
         return;
       }
 
-      const selectedFormat = document.querySelector('input[name="audioFormat"]:checked').value;
+      const selectedFormat = document.querySelector('input[name="playlistAudioFormat"]:checked').value;
       const selectedTracks = checkedBoxes.map((cb, idx) => {
         const itemIdx = parseInt(cb.getAttribute('data-idx'));
-        const item = currentPlaylistData.items[itemIdx];
+        const item = currentMediaData.items[itemIdx];
         return {
           id: item.id,
           title: item.title,
@@ -295,8 +448,9 @@
       });
 
       const payload = {
-        playlist_id: currentPlaylistData.id,
-        playlist_title: currentPlaylistData.title,
+        media_type: "playlist",
+        playlist_id: currentMediaData.id,
+        playlist_title: currentMediaData.title,
         format: selectedFormat,
         tracks: selectedTracks
       };
@@ -323,7 +477,8 @@
 
     function startLiveProgressTracking(jobId, tracks) {
       currentJobId = jobId;
-      document.getElementById('reviewSection').classList.add('hidden');
+      document.getElementById('singleReviewSection').classList.add('hidden');
+      document.getElementById('playlistReviewSection').classList.add('hidden');
       document.getElementById('progressSection').classList.remove('hidden');
       
       const container = document.getElementById('liveProgressContainer');
