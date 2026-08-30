@@ -62,7 +62,7 @@ def format_bytes(size: Optional[int]) -> Optional[str]:
 def get_resolution_label(height: int, fps: Optional[int] = None) -> (str, str):
     fps_suffix = f" {fps}fps" if fps and fps > 30 else ""
     if height >= 4320:
-        return f"8K ({height}p{fps_suffix})", "Ultra High Definition 8K"
+        return f"8K Ultra HD ({height}p{fps_suffix})", "Ultra High Definition 8K"
     elif height >= 2160:
         return f"4K Ultra HD ({height}p{fps_suffix})", "Ultra High Definition 4K"
     elif height >= 1440:
@@ -154,13 +154,12 @@ class MultiPlatformAnalyzerService:
                 formats = info.get('formats') or []
                 quality_options: List[QualityOption] = []
 
-                # Find all unique video resolutions dynamically (e.g. 4K 2160p, 2K 1440p, 1080p, 720p, etc.)
+                # Group by resolution height (supports 4320p 8K, 2160p 4K, 1440p 2K, 1080p, 720p, etc.)
                 video_heights_map = {}
                 for f in formats:
                     h = f.get('height')
                     vcodec = f.get('vcodec')
                     if h and isinstance(h, int) and h > 0 and vcodec != 'none':
-                        # Prefer format with higher bitrate or known filesize
                         if h not in video_heights_map:
                             video_heights_map[h] = f
                         else:
@@ -169,7 +168,7 @@ class MultiPlatformAnalyzerService:
                             if new_size > curr_size:
                                 video_heights_map[h] = f
 
-                # Sort heights in descending order (highest resolution first: 4320p -> 2160p -> 1440p -> 1080p -> etc.)
+                # Sort from Highest Resolution to Lowest Resolution (e.g. 4K 2160p -> 2K 1440p -> 1080p -> 720p...)
                 sorted_heights = sorted(video_heights_map.keys(), reverse=True)
 
                 if sorted_heights:
@@ -189,7 +188,6 @@ class MultiPlatformAnalyzerService:
                             note=note
                         ))
                 else:
-                    # Generic / Direct MP4 URL (e.g. Instagram Reels or Twitter posts without multiple DASH heights)
                     approx_size = info.get('filesize') or info.get('filesize_approx')
                     quality_options.append(QualityOption(
                         format_id="video_best",
@@ -201,7 +199,7 @@ class MultiPlatformAnalyzerService:
                         note="Highest Available Stream"
                     ))
 
-                # Add Audio Options
+                # Add High Quality Audio options
                 quality_options.append(QualityOption(
                     format_id="m4a",
                     label="M4A (AAC 256 kbps)",
