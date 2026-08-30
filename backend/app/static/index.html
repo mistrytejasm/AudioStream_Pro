@@ -371,8 +371,12 @@
 
           tr.innerHTML = `
             <td class="py-3.5 px-4 font-bold text-white flex items-center gap-2">
-              ${isAudio ? '🎵' : '🎬'} ${opt.resolution}
-              <span class="text-[10px] text-slate-500 font-normal">(${opt.note || opt.label})</span>
+              ${isAudio ? '🎵' : '🎬'} 
+              <span>${opt.label || opt.resolution}</span>
+              ${opt.resolution.includes('2160') || opt.label.includes('4K') ? '<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-extrabold border border-amber-500/30">4K UHD</span>' : ''}
+              ${opt.resolution.includes('1440') || opt.label.includes('2K') ? '<span class="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-extrabold border border-sky-500/30">2K QHD</span>' : ''}
+              ${opt.resolution.includes('1080') ? '<span class="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/30">FHD</span>' : ''}
+              <span class="text-[10px] text-slate-500 font-normal">(${opt.note || ''})</span>
             </td>
             <td class="py-3.5 px-4 font-mono uppercase text-slate-300">${opt.ext}</td>
             <td class="py-3.5 px-4 font-mono text-slate-400">${opt.filesize_approx || 'Dynamic'}</td>

@@ -59,6 +59,27 @@ def format_bytes(size: Optional[int]) -> Optional[str]:
         size /= 1024.0
     return f"{size:.1f} TB"
 
+def get_resolution_label(height: int, fps: Optional[int] = None) -> (str, str):
+    fps_suffix = f" {fps}fps" if fps and fps > 30 else ""
+    if height >= 4320:
+        return f"8K ({height}p{fps_suffix})", "Ultra High Definition 8K"
+    elif height >= 2160:
+        return f"4K Ultra HD ({height}p{fps_suffix})", "Ultra High Definition 4K"
+    elif height >= 1440:
+        return f"2K QHD ({height}p{fps_suffix})", "Quad HD 1440p"
+    elif height >= 1080:
+        return f"1080p Full HD{fps_suffix}", "FHD High Quality"
+    elif height >= 720:
+        return f"720p HD{fps_suffix}", "Standard HD Video"
+    elif height >= 480:
+        return f"480p SD", "Standard Definition"
+    elif height >= 360:
+        return f"360p", "Medium Quality"
+    elif height >= 240:
+        return f"240p", "Low Bandwidth"
+    else:
+        return f"{height}p", "Basic Quality"
+
 class MultiPlatformAnalyzerService:
     @staticmethod
     def _extract_media_sync(url: str) -> MediaAnalysisResult:
@@ -117,8 +138,7 @@ class MultiPlatformAnalyzerService:
                     quality_options=[]
                 )
             else:
-                # Single Media (YouTube, Instagram, Twitter/X, Facebook)
-                # If entries list has 1 item, flatten it
+                # Single Media
                 if 'entries' in info and info['entries']:
                     info = info['entries'][0]
 
@@ -134,33 +154,42 @@ class MultiPlatformAnalyzerService:
                 formats = info.get('formats') or []
                 quality_options: List[QualityOption] = []
 
-                # Find video formats
-                target_resolutions = [
-                    (1080, "1080p Full HD", "Best Visual Quality"),
-                    (720, "720p HD", "Standard HD Video"),
-                    (480, "480p SD", "Efficient Compact Video"),
-                    (360, "360p", "Small File Size")
-                ]
+                # Find all unique video resolutions dynamically (e.g. 4K 2160p, 2K 1440p, 1080p, 720p, etc.)
+                video_heights_map = {}
+                for f in formats:
+                    h = f.get('height')
+                    vcodec = f.get('vcodec')
+                    if h and isinstance(h, int) and h > 0 and vcodec != 'none':
+                        # Prefer format with higher bitrate or known filesize
+                        if h not in video_heights_map:
+                            video_heights_map[h] = f
+                        else:
+                            curr_size = video_heights_map[h].get('filesize') or video_heights_map[h].get('filesize_approx') or 0
+                            new_size = f.get('filesize') or f.get('filesize_approx') or 0
+                            if new_size > curr_size:
+                                video_heights_map[h] = f
 
-                has_specific_resolutions = False
-                for height, label, note in target_resolutions:
-                    matching_fmts = [f for f in formats if f.get('height') == height and f.get('vcodec') != 'none']
-                    if matching_fmts:
-                        has_specific_resolutions = True
-                        best_match = matching_fmts[-1]
-                        approx_size = best_match.get('filesize') or best_match.get('filesize_approx')
+                # Sort heights in descending order (highest resolution first: 4320p -> 2160p -> 1440p -> 1080p -> etc.)
+                sorted_heights = sorted(video_heights_map.keys(), reverse=True)
+
+                if sorted_heights:
+                    for h in sorted_heights:
+                        fmt_entry = video_heights_map[h]
+                        fps = fmt_entry.get('fps')
+                        label, note = get_resolution_label(h, fps)
+                        approx_size = fmt_entry.get('filesize') or fmt_entry.get('filesize_approx')
+
                         quality_options.append(QualityOption(
-                            format_id=f"{height}p",
+                            format_id=f"{h}p",
                             label=label,
-                            resolution=f"{height}p",
+                            resolution=f"{h}p",
                             ext="mp4",
                             filesize_approx=format_bytes(approx_size) if approx_size else None,
                             type="video_audio",
                             note=note
                         ))
-
-                # For platforms without discrete DASH heights (e.g. direct Instagram/Twitter/Facebook streams)
-                if not has_specific_resolutions:
+                else:
+                    # Generic / Direct MP4 URL (e.g. Instagram Reels or Twitter posts without multiple DASH heights)
                     approx_size = info.get('filesize') or info.get('filesize_approx')
                     quality_options.append(QualityOption(
                         format_id="video_best",
