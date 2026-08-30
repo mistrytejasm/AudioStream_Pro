@@ -70,7 +70,7 @@
         </div>
       </div>
 
-      <!-- URL Input Field -->
+      <!-- URL Input Field with Clear Button -->
       <div class="flex flex-col sm:flex-row gap-3">
         <div class="relative flex-1">
           <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -81,9 +81,21 @@
           <input 
             type="url" 
             id="playlistUrl" 
+            oninput="toggleClearButton()"
             placeholder="Paste YouTube, Instagram, X, or Facebook URL here..." 
-            class="w-full pl-10 pr-4 py-3.5 bg-slate-950/80 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
+            class="w-full pl-10 pr-10 py-3.5 bg-slate-950/80 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
           />
+          <button 
+            type="button" 
+            id="clearUrlBtn" 
+            onclick="clearUrlInput()" 
+            class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-200 transition-colors"
+            title="Clear URL"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
         <button 
           id="analyzeBtn" 
@@ -271,6 +283,24 @@
     let activeEventSource = null;
     let currentJobId = null;
     let selectedPlatformHint = 'youtube';
+
+    function toggleClearButton() {
+      const input = document.getElementById('playlistUrl');
+      const clearBtn = document.getElementById('clearUrlBtn');
+      if (input.value.trim().length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+    }
+
+    function clearUrlInput() {
+      const input = document.getElementById('playlistUrl');
+      input.value = '';
+      toggleClearButton();
+      input.focus();
+      document.getElementById('analyzeError').classList.add('hidden');
+    }
 
     function selectPlatform(platform) {
       selectedPlatformHint = platform;

@@ -82,11 +82,9 @@ def get_resolution_label(height: int, fps: Optional[int] = None) -> (str, str):
 
 class MultiPlatformAnalyzerService:
     @staticmethod
-    def _extract_media_sync(url: str) -> MediaAnalysisResult:
-        platform = detect_platform(url)
-
+    def _extract_with_opts(url: str, client_list: Optional[List[str]] = None) -> Dict[str, Any]:
         ydl_opts = {
-            'extract_flat': 'in_playlist' if platform == Platform.YOUTUBE else False,
+            'extract_flat': 'in_playlist' if detect_platform(url) == Platform.YOUTUBE else False,
             'skip_download': True,
             'quiet': True,
             'no_warnings': True,
@@ -94,153 +92,185 @@ class MultiPlatformAnalyzerService:
             'nocheckcertificate': True,
         }
 
+        if client_list:
+            ydl_opts['extractor_args'] = {
+                'youtube': {
+                    'player_client': client_list
+                }
+            }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            if not info:
-                raise ValueError(f"Could not extract information from {platform.value.upper()} URL")
+            return ydl.extract_info(url, download=False)
 
-            is_playlist = (info.get('_type') == 'playlist' or 'entries' in info) and len(info.get('entries', [])) > 1
+    @classmethod
+    def _extract_media_sync(cls, url: str) -> MediaAnalysisResult:
+        platform = detect_platform(url)
 
-            if is_playlist:
-                entries = info.get('entries') or []
-                items = []
-                for idx, entry in enumerate(entries, start=1):
-                    if not entry:
-                        continue
-                    duration = float(entry.get('duration') or 0)
-                    item_url = entry.get('url') or entry.get('webpage_url') or f"https://www.youtube.com/watch?v={entry.get('id')}"
-                    
-                    thumbnails = entry.get('thumbnails') or []
-                    thumbnail_url = entry.get('thumbnail')
-                    if thumbnails and isinstance(thumbnails, list):
-                        thumbnail_url = thumbnails[-1].get('url', thumbnail_url)
-                    
-                    items.append(PlaylistItem(
-                        id=str(entry.get('id') or f"track_{idx}"),
-                        title=str(entry.get('title') or f"Track {idx}"),
-                        duration=duration,
-                        duration_string=format_duration(duration),
-                        uploader=str(entry.get('uploader') or entry.get('channel') or "Unknown Artist"),
-                        thumbnail=thumbnail_url,
-                        url=item_url
-                    ))
+        info = None
+        last_err = None
 
-                return MediaAnalysisResult(
-                    platform=platform,
-                    type=MediaType.PLAYLIST,
-                    id=str(info.get('id') or "playlist"),
-                    title=info.get('title') or "Media Playlist",
-                    uploader=info.get('uploader') or info.get('channel') or "Unknown Channel",
-                    thumbnail=items[0].thumbnail if items else None,
-                    url=url,
-                    item_count=len(items),
-                    items=items,
-                    quality_options=[]
-                )
-            else:
-                # Single Media
-                if 'entries' in info and info['entries']:
-                    info = info['entries'][0]
+        # Try multiple extraction strategies for cloud datacenter IPs:
+        # 1. Standard web extraction
+        # 2. Android + iOS fallback client
+        # 3. TV / Web embedded fallback client
+        strategies = [
+            None,
+            ['android', 'ios'],
+            ['tv_embedded', 'web_embedded']
+        ] if platform == Platform.YOUTUBE else [None]
 
-                duration = float(info.get('duration') or 0)
-                thumbnails = info.get('thumbnails') or []
-                thumbnail_url = info.get('thumbnail')
+        for strat in strategies:
+            try:
+                info = cls._extract_with_opts(url, strat)
+                if info:
+                    break
+            except Exception as e:
+                last_err = e
+                logger.warning(f"Strategy {strat} failed: {e}. Trying next fallback...")
+
+        if not info:
+            raise ValueError(f"Could not analyze video or playlist. YouTube may be requiring bot verification on this datacenter IP. Detail: {last_err}")
+
+        is_playlist = (info.get('_type') == 'playlist' or 'entries' in info) and len(info.get('entries', [])) > 1
+
+        if is_playlist:
+            entries = info.get('entries') or []
+            items = []
+            for idx, entry in enumerate(entries, start=1):
+                if not entry:
+                    continue
+                duration = float(entry.get('duration') or 0)
+                item_url = entry.get('url') or entry.get('webpage_url') or f"https://www.youtube.com/watch?v={entry.get('id')}"
+                
+                thumbnails = entry.get('thumbnails') or []
+                thumbnail_url = entry.get('thumbnail')
                 if thumbnails and isinstance(thumbnails, list):
                     thumbnail_url = thumbnails[-1].get('url', thumbnail_url)
+                
+                items.append(PlaylistItem(
+                    id=str(entry.get('id') or f"track_{idx}"),
+                    title=str(entry.get('title') or f"Track {idx}"),
+                    duration=duration,
+                    duration_string=format_duration(duration),
+                    uploader=str(entry.get('uploader') or entry.get('channel') or "Unknown Artist"),
+                    thumbnail=thumbnail_url,
+                    url=item_url
+                ))
 
-                title = info.get('title') or f"{platform.value.capitalize()} Video"
-                uploader = info.get('uploader') or info.get('channel') or info.get('uploader_id') or f"@{platform.value}"
+            return MediaAnalysisResult(
+                platform=platform,
+                type=MediaType.PLAYLIST,
+                id=str(info.get('id') or "playlist"),
+                title=info.get('title') or "Media Playlist",
+                uploader=info.get('uploader') or info.get('channel') or "Unknown Channel",
+                thumbnail=items[0].thumbnail if items else None,
+                url=url,
+                item_count=len(items),
+                items=items,
+                quality_options=[]
+            )
+        else:
+            # Single Media
+            if 'entries' in info and info['entries']:
+                info = info['entries'][0]
 
-                formats = info.get('formats') or []
-                quality_options: List[QualityOption] = []
+            duration = float(info.get('duration') or 0)
+            thumbnails = info.get('thumbnails') or []
+            thumbnail_url = info.get('thumbnail')
+            if thumbnails and isinstance(thumbnails, list):
+                thumbnail_url = thumbnails[-1].get('url', thumbnail_url)
 
-                # Group by resolution height (supports 4320p 8K, 2160p 4K, 1440p 2K, 1080p, 720p, etc.)
-                video_heights_map = {}
-                for f in formats:
-                    h = f.get('height')
-                    vcodec = f.get('vcodec')
-                    if h and isinstance(h, int) and h > 0 and vcodec != 'none':
-                        if h not in video_heights_map:
+            title = info.get('title') or f"{platform.value.capitalize()} Video"
+            uploader = info.get('uploader') or info.get('channel') or info.get('uploader_id') or f"@{platform.value}"
+
+            formats = info.get('formats') or []
+            quality_options: List[QualityOption] = []
+
+            video_heights_map = {}
+            for f in formats:
+                h = f.get('height')
+                vcodec = f.get('vcodec')
+                if h and isinstance(h, int) and h > 0 and vcodec != 'none':
+                    if h not in video_heights_map:
+                        video_heights_map[h] = f
+                    else:
+                        curr_size = video_heights_map[h].get('filesize') or video_heights_map[h].get('filesize_approx') or 0
+                        new_size = f.get('filesize') or f.get('filesize_approx') or 0
+                        if new_size > curr_size:
                             video_heights_map[h] = f
-                        else:
-                            curr_size = video_heights_map[h].get('filesize') or video_heights_map[h].get('filesize_approx') or 0
-                            new_size = f.get('filesize') or f.get('filesize_approx') or 0
-                            if new_size > curr_size:
-                                video_heights_map[h] = f
 
-                # Sort from Highest Resolution to Lowest Resolution (e.g. 4K 2160p -> 2K 1440p -> 1080p -> 720p...)
-                sorted_heights = sorted(video_heights_map.keys(), reverse=True)
+            sorted_heights = sorted(video_heights_map.keys(), reverse=True)
 
-                if sorted_heights:
-                    for h in sorted_heights:
-                        fmt_entry = video_heights_map[h]
-                        fps = fmt_entry.get('fps')
-                        label, note = get_resolution_label(h, fps)
-                        approx_size = fmt_entry.get('filesize') or fmt_entry.get('filesize_approx')
+            if sorted_heights:
+                for h in sorted_heights:
+                    fmt_entry = video_heights_map[h]
+                    fps = fmt_entry.get('fps')
+                    label, note = get_resolution_label(h, fps)
+                    approx_size = fmt_entry.get('filesize') or fmt_entry.get('filesize_approx')
 
-                        quality_options.append(QualityOption(
-                            format_id=f"{h}p",
-                            label=label,
-                            resolution=f"{h}p",
-                            ext="mp4",
-                            filesize_approx=format_bytes(approx_size) if approx_size else None,
-                            type="video_audio",
-                            note=note
-                        ))
-                else:
-                    approx_size = info.get('filesize') or info.get('filesize_approx')
                     quality_options.append(QualityOption(
-                        format_id="video_best",
-                        label="Best Video (MP4)",
-                        resolution="Original Quality",
+                        format_id=f"{h}p",
+                        label=label,
+                        resolution=f"{h}p",
                         ext="mp4",
                         filesize_approx=format_bytes(approx_size) if approx_size else None,
                         type="video_audio",
-                        note="Highest Available Stream"
+                        note=note
                     ))
-
-                # Add High Quality Audio options
+            else:
+                approx_size = info.get('filesize') or info.get('filesize_approx')
                 quality_options.append(QualityOption(
-                    format_id="m4a",
-                    label="M4A (AAC 256 kbps)",
-                    resolution="Audio (Apple / iPhone)",
-                    ext="m4a",
-                    type="audio_only",
-                    note="High Fidelity AAC with Tags"
-                ))
-                quality_options.append(QualityOption(
-                    format_id="mp3",
-                    label="MP3 (320 kbps CBR)",
-                    resolution="Audio (Universal)",
-                    ext="mp3",
-                    type="audio_only",
-                    note="Maximum Quality MP3 with ID3v2.4"
+                    format_id="video_best",
+                    label="Best Video (MP4)",
+                    resolution="Original Quality",
+                    ext="mp4",
+                    filesize_approx=format_bytes(approx_size) if approx_size else None,
+                    type="video_audio",
+                    note="Highest Available Stream"
                 ))
 
-                single_item = PlaylistItem(
-                    id=str(info.get('id') or "single_media"),
-                    title=title,
-                    duration=duration,
-                    duration_string=format_duration(duration),
-                    uploader=uploader,
-                    thumbnail=thumbnail_url,
-                    url=url
-                )
+            # Add Audio Options
+            quality_options.append(QualityOption(
+                format_id="m4a",
+                label="M4A (AAC 256 kbps)",
+                resolution="Audio (Apple / iPhone)",
+                ext="m4a",
+                type="audio_only",
+                note="High Fidelity AAC with Tags"
+            ))
+            quality_options.append(QualityOption(
+                format_id="mp3",
+                label="MP3 (320 kbps CBR)",
+                resolution="Audio (Universal)",
+                ext="mp3",
+                type="audio_only",
+                note="Maximum Quality MP3 with ID3v2.4"
+            ))
 
-                return MediaAnalysisResult(
-                    platform=platform,
-                    type=MediaType.SINGLE,
-                    id=single_item.id,
-                    title=single_item.title,
-                    uploader=single_item.uploader,
-                    duration=duration,
-                    duration_string=format_duration(duration),
-                    thumbnail=thumbnail_url,
-                    url=url,
-                    item_count=1,
-                    items=[single_item],
-                    quality_options=quality_options
-                )
+            single_item = PlaylistItem(
+                id=str(info.get('id') or "single_media"),
+                title=title,
+                duration=duration,
+                duration_string=format_duration(duration),
+                uploader=uploader,
+                thumbnail=thumbnail_url,
+                url=url
+            )
+
+            return MediaAnalysisResult(
+                platform=platform,
+                type=MediaType.SINGLE,
+                id=single_item.id,
+                title=single_item.title,
+                uploader=single_item.uploader,
+                duration=duration,
+                duration_string=format_duration(duration),
+                thumbnail=thumbnail_url,
+                url=url,
+                item_count=1,
+                items=[single_item],
+                quality_options=quality_options
+            )
 
     async def analyze_media(self, url: str) -> MediaAnalysisResult:
         if not is_safe_url(url):
