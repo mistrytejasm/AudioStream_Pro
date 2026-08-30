@@ -1,4 +1,4 @@
-﻿import os
+import os
 import asyncio
 import logging
 from pathlib import Path
@@ -44,7 +44,8 @@ def detect_platform(url: str) -> Platform:
     return Platform.GENERIC
 
 def get_cookies_filepath() -> Optional[str]:
-    # 1. Render Secret Files mounted at /etc/secrets/
+    # 1. Render Secret Files mounted at /etc/secrets/ (Read-only volume on Render)
+    # Copy to writable temp directory because yt-dlp tries to flush/update cookies on disk
     render_secret_candidates = [
         Path("/etc/secrets/cookies"),
         Path("/etc/secrets/cookies.txt"),
@@ -53,8 +54,13 @@ def get_cookies_filepath() -> Optional[str]:
     ]
     for p in render_secret_candidates:
         if p.exists() and p.stat().st_size > 10:
-            logger.info(f"Using Render secret cookies file from {p}")
-            return str(p)
+            try:
+                target_path = settings.TEMP_DIR / "render_yt_cookies.txt"
+                target_path.write_text(p.read_text(encoding="utf-8", errors="ignore"), encoding="utf-8")
+                return str(target_path)
+            except Exception as e:
+                logger.warning(f"Could not copy {p} to temp: {e}")
+                return str(p)
 
     # 2. Direct file path from env
     if settings.YOUTUBE_COOKIES_FILE and Path(settings.YOUTUBE_COOKIES_FILE).exists():
