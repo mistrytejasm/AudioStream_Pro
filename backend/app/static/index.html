@@ -1,0 +1,526 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playlist Audio Converter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center p-4 sm:p-8 selection:bg-indigo-500 selection:text-white">
+
+  <!-- Header -->
+  <header class="w-full max-w-4xl flex items-center justify-between pb-6 border-b border-slate-800 mb-8">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white tracking-tight">AudioStream Pro</h1>
+        <p class="text-xs text-slate-400">High-Quality Audio Playlist Downloader & Conversion Suite</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span> Engine Ready
+      </span>
+    </div>
+  </header>
+
+  <main class="w-full max-w-4xl space-y-6">
+
+    <!-- STEP 1: Input URL Card -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3">1. Enter Playlist URL</h2>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </svg>
+          </div>
+          <input 
+            type="url" 
+            id="playlistUrl" 
+            placeholder="Paste YouTube playlist or video URL here..." 
+            class="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm"
+          />
+        </div>
+        <button 
+          id="analyzeBtn" 
+          onclick="analyzePlaylist()" 
+          class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-medium rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+        >
+          <span id="analyzeSpinner" class="hidden">
+            <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </span>
+          <span id="analyzeText">Analyze Playlist</span>
+        </button>
+      </div>
+      <div id="analyzeError" class="hidden mt-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 flex items-center gap-2">
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span id="analyzeErrorMsg"></span>
+      </div>
+    </section>
+
+    <!-- STEP 2: Playlist Tracks & Format Selection -->
+    <section id="reviewSection" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
+        <div>
+          <h2 class="text-lg font-bold text-white" id="playlistTitleDisplay">My Playlist</h2>
+          <p class="text-xs text-slate-400" id="playlistMetaDisplay">Channel • 0 tracks</p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <button onclick="toggleSelectAll(true)" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">Select All</button>
+          <span class="text-slate-700">•</span>
+          <button onclick="toggleSelectAll(false)" class="text-xs font-semibold text-slate-400 hover:text-slate-300 transition-colors">Deselect All</button>
+        </div>
+      </div>
+
+      <!-- Tracks List -->
+      <div class="space-y-2 max-h-80 overflow-y-auto pr-1 custom-scroll" id="tracksContainer">
+        <!-- Injected tracks -->
+      </div>
+
+      <!-- Format Selection -->
+      <div class="pt-4 border-t border-slate-800">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">2. Choose Output Format (High Quality)</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          
+          <label class="relative flex items-start p-4 bg-slate-950/60 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/5">
+            <input type="radio" name="audioFormat" value="m4a" checked class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+            <div class="ml-3">
+              <span class="block text-sm font-bold text-white flex items-center gap-1.5">
+                M4A (AAC 256 kbps)
+                <span class="text-[10px] bg-indigo-500/20 text-indigo-300 font-medium px-2 py-0.5 rounded-full border border-indigo-500/30">Apple / iPhone Optimized</span>
+              </span>
+              <span class="block text-xs text-slate-400 mt-1">High-bitrate AAC with faststart streaming atom. Embedded metadata & cover art.</span>
+            </div>
+          </label>
+
+          <label class="relative flex items-start p-4 bg-slate-950/60 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-all has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-500/5">
+            <input type="radio" name="audioFormat" value="mp3" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+            <div class="ml-3">
+              <span class="block text-sm font-bold text-white">MP3 (320 kbps CBR)</span>
+              <span class="block text-xs text-slate-400 mt-1">Maximum quality MP3. ID3v2.4 metadata & embedded high-resolution artwork.</span>
+            </div>
+          </label>
+
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button 
+          id="startProcessBtn" 
+          onclick="startProcessing()" 
+          class="px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-[0.98] text-white font-bold rounded-xl text-sm transition-all flex items-center gap-2 shadow-xl shadow-indigo-600/30 cursor-pointer"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Start Processing Selected Tracks
+        </button>
+      </div>
+    </section>
+
+    <!-- STEP 3: Live Progress & Download -->
+    <section id="progressSection" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Processing Status</span>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2" id="jobStatusHeader">
+            Converting Playlist...
+          </h2>
+          <p class="text-xs text-slate-400" id="progressSummary">0 / 0 completed</p>
+        </div>
+
+        <div id="zipDownloadArea" class="hidden">
+          <a 
+            id="zipDownloadBtn" 
+            href="#" 
+            class="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold rounded-xl text-sm transition-all flex items-center gap-2 shadow-xl shadow-emerald-600/30 ring-2 ring-emerald-400/40"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Download Full Playlist (High-Quality ZIP)
+          </a>
+        </div>
+      </div>
+
+      <!-- Overall progress bar -->
+      <div class="space-y-2">
+        <div class="flex justify-between text-xs text-slate-400">
+          <span>Overall Progress</span>
+          <span id="overallPercentage" class="font-bold text-white">0%</span>
+        </div>
+        <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
+          <div id="overallProgressBar" class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-300 w-0"></div>
+        </div>
+      </div>
+
+      <!-- Real-time Per-Track Items -->
+      <div class="space-y-3 max-h-[32rem] overflow-y-auto pr-1 custom-scroll" id="liveProgressContainer">
+        <!-- Injected Live Track Cards -->
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="mt-auto pt-8 text-center text-xs text-slate-500">
+    <p>Playlist Audio Converter • Clean Audio Architecture • FFmpeg 6.0 Engine</p>
+  </footer>
+
+  <script>
+    let currentPlaylistData = null;
+    let activeEventSource = null;
+    let currentJobId = null;
+
+    async function analyzePlaylist() {
+      const urlInput = document.getElementById('playlistUrl');
+      const url = urlInput.value.trim();
+      const errBox = document.getElementById('analyzeError');
+      const errMsg = document.getElementById('analyzeErrorMsg');
+      const spinner = document.getElementById('analyzeSpinner');
+      const btnText = document.getElementById('analyzeText');
+      const analyzeBtn = document.getElementById('analyzeBtn');
+
+      if (!url) {
+        errBox.classList.remove('hidden');
+        errMsg.textContent = 'Please enter a valid URL.';
+        return;
+      }
+
+      errBox.classList.add('hidden');
+      spinner.classList.remove('hidden');
+      btnText.textContent = 'Analyzing...';
+      analyzeBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/v1/playlists/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || 'Failed to analyze URL');
+        }
+
+        currentPlaylistData = await res.json();
+        renderPlaylistReview(currentPlaylistData);
+      } catch (err) {
+        errBox.classList.remove('hidden');
+        errMsg.textContent = err.message || 'An error occurred during analysis.';
+      } finally {
+        spinner.classList.add('hidden');
+        btnText.textContent = 'Analyze Playlist';
+        analyzeBtn.disabled = false;
+      }
+    }
+
+    function renderPlaylistReview(data) {
+      document.getElementById('playlistTitleDisplay').textContent = data.title;
+      document.getElementById('playlistMetaDisplay').textContent = `${data.uploader} • ${data.items.length} tracks detected`;
+      
+      const container = document.getElementById('tracksContainer');
+      container.innerHTML = '';
+
+      data.items.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl hover:border-slate-700 transition-colors text-sm';
+        div.innerHTML = `
+          <div class="flex items-center gap-3 overflow-hidden">
+            <input type="checkbox" checked id="chk_${item.id}" data-idx="${idx}" class="track-chk rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer">
+            <span class="text-xs text-slate-500 font-mono w-5 shrink-0">${(idx + 1).toString().padStart(2, '0')}</span>
+            <div class="truncate">
+              <span class="font-medium text-slate-200 block truncate">${escapeHtml(item.title)}</span>
+              <span class="text-xs text-slate-500 block truncate">${escapeHtml(item.uploader)}</span>
+            </div>
+          </div>
+          <span class="text-xs font-mono text-slate-400 shrink-0 ml-3">${item.duration_string}</span>
+        `;
+        container.appendChild(div);
+      });
+
+      document.getElementById('reviewSection').classList.remove('hidden');
+      document.getElementById('progressSection').classList.add('hidden');
+    }
+
+    function toggleSelectAll(select) {
+      document.querySelectorAll('.track-chk').forEach(cb => cb.checked = select);
+    }
+
+    async function startProcessing() {
+      if (!currentPlaylistData) return;
+
+      const checkedBoxes = Array.from(document.querySelectorAll('.track-chk:checked'));
+      if (checkedBoxes.length === 0) {
+        alert('Please select at least one track to process.');
+        return;
+      }
+
+      const selectedFormat = document.querySelector('input[name="audioFormat"]:checked').value;
+      const selectedTracks = checkedBoxes.map((cb, idx) => {
+        const itemIdx = parseInt(cb.getAttribute('data-idx'));
+        const item = currentPlaylistData.items[itemIdx];
+        return {
+          id: item.id,
+          title: item.title,
+          url: item.url,
+          duration: item.duration,
+          uploader: item.uploader,
+          thumbnail: item.thumbnail,
+          position: idx + 1
+        };
+      });
+
+      const payload = {
+        playlist_id: currentPlaylistData.id,
+        playlist_title: currentPlaylistData.title,
+        format: selectedFormat,
+        tracks: selectedTracks
+      };
+
+      try {
+        const res = await fetch('/api/v1/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || 'Could not create processing job');
+        }
+
+        const job = await res.json();
+        currentJobId = job.job_id;
+        startLiveProgressTracking(job.job_id, payload.tracks);
+      } catch (err) {
+        alert('Error starting job: ' + err.message);
+      }
+    }
+
+    function startLiveProgressTracking(jobId, tracks) {
+      currentJobId = jobId;
+      document.getElementById('reviewSection').classList.add('hidden');
+      document.getElementById('progressSection').classList.remove('hidden');
+      
+      const container = document.getElementById('liveProgressContainer');
+      container.innerHTML = '';
+
+      tracks.forEach(track => {
+        const div = document.createElement('div');
+        div.id = `track_row_${track.id}`;
+        div.className = 'flex flex-col gap-2 p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl transition-all';
+        div.innerHTML = `
+          <div class="flex items-center justify-between text-sm">
+            <div class="flex items-center gap-2 truncate pr-2">
+              <span class="text-xs font-mono text-slate-500">${track.position.toString().padStart(2, '0')}</span>
+              <span class="font-medium text-slate-200 truncate">${escapeHtml(track.title)}</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span id="track_badge_${track.id}" class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400">Waiting</span>
+              <a id="track_dl_${track.id}" href="#" class="hidden text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Download
+              </a>
+            </div>
+          </div>
+          <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+            <div id="track_bar_${track.id}" class="h-full bg-indigo-500 rounded-full transition-all duration-300 w-0"></div>
+          </div>
+          <div id="track_err_${track.id}" class="hidden text-[11px] text-rose-400 font-medium truncate"></div>
+          
+          <!-- Recovery Action Controls (shown on fail) -->
+          <div id="track_recovery_${track.id}" class="hidden pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+            <button onclick="retryTrack('${track.id}')" class="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Retry
+            </button>
+            <button onclick="autoResolveTrack('${track.id}')" class="px-2.5 py-1 bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 border border-violet-500/30 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              Auto-Find Working Audio
+            </button>
+            <button onclick="toggleCustomUrlInput('${track.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold transition-colors">
+              ✏️ Paste Custom URL
+            </button>
+            <div id="custom_url_box_${track.id}" class="hidden w-full flex gap-2 mt-1">
+              <input type="url" id="custom_url_input_${track.id}" placeholder="Paste working YouTube URL..." class="flex-1 px-3 py-1 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
+              <button onclick="substituteCustomUrl('${track.id}')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition-colors">Submit</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      if (activeEventSource) {
+        activeEventSource.close();
+      }
+
+      activeEventSource = new EventSource(`/api/v1/jobs/${jobId}/stream`);
+      
+      activeEventSource.onmessage = function(event) {
+        try {
+          const data = JSON.parse(event.data);
+          updateProgressUI(data);
+        } catch (e) {
+          console.error("SSE parse error", e);
+        }
+      };
+
+      activeEventSource.onerror = function() {
+        console.warn("SSE connection interrupted");
+      };
+    }
+
+    function updateProgressUI(job) {
+      const overallPct = Math.round((job.completed_tracks / job.total_tracks) * 100) || 0;
+      document.getElementById('overallPercentage').textContent = `${overallPct}%`;
+      document.getElementById('overallProgressBar').style.width = `${overallPct}%`;
+      document.getElementById('progressSummary').textContent = `${job.completed_tracks} / ${job.total_tracks} completed`;
+
+      Object.values(job.tracks).forEach(track => {
+        const badge = document.getElementById(`track_badge_${track.id}`);
+        const bar = document.getElementById(`track_bar_${track.id}`);
+        const dlBtn = document.getElementById(`track_dl_${track.id}`);
+        const errDiv = document.getElementById(`track_err_${track.id}`);
+        const recoveryDiv = document.getElementById(`track_recovery_${track.id}`);
+
+        if (badge && bar) {
+          bar.style.width = `${track.progress}%`;
+          
+          if (track.status === 'PENDING') {
+            badge.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400';
+            badge.textContent = 'Waiting';
+            if (recoveryDiv) recoveryDiv.classList.add('hidden');
+          } else if (track.status === 'ACQUIRING') {
+            badge.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 animate-pulse';
+            badge.textContent = 'Acquiring Source';
+            if (recoveryDiv) recoveryDiv.classList.add('hidden');
+          } else if (track.status === 'CONVERTING') {
+            badge.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
+            badge.textContent = 'Converting Audio';
+            if (recoveryDiv) recoveryDiv.classList.add('hidden');
+          } else if (track.status === 'VALIDATING') {
+            badge.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20';
+            badge.textContent = 'Validating Media';
+            if (recoveryDiv) recoveryDiv.classList.add('hidden');
+          } else if (track.status === 'TAGGING') {
+            badge.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20';
+            badge.textContent = 'Embedding Tags';
+            if (recoveryDiv) recoveryDiv.classList.add('hidden');
+          } else if (track.status === 'COMPLETED') {
+            badge.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+            badge.textContent = 'Completed ✓';
+            bar.className = 'h-full bg-emerald-500 rounded-full w-full';
+            if (track.download_url && dlBtn) {
+              dlBtn.href = track.download_url;
+              dlBtn.classList.remove('hidden');
+            }
+            if (errDiv) errDiv.classList.add('hidden');
+            if (recoveryDiv) recoveryDiv.classList.add('hidden');
+          } else if (track.status === 'FAILED') {
+            badge.className = 'text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20';
+            badge.textContent = 'Unavailable ✕';
+            bar.className = 'h-full bg-rose-500 rounded-full w-full';
+            if (track.error && errDiv) {
+              errDiv.textContent = track.error;
+              errDiv.classList.remove('hidden');
+            }
+            if (recoveryDiv) recoveryDiv.classList.remove('hidden');
+          }
+        }
+      });
+
+      if (job.status === 'COMPLETED' || job.status === 'FAILED') {
+        const header = document.getElementById('jobStatusHeader');
+        if (job.completed_tracks > 0) {
+          header.innerHTML = '<span class="text-emerald-400">✓ All Processing Complete</span>';
+          if (job.zip_download_url) {
+            const zipArea = document.getElementById('zipDownloadArea');
+            const zipBtn = document.getElementById('zipDownloadBtn');
+            zipBtn.href = job.zip_download_url;
+            zipArea.classList.remove('hidden');
+          }
+        } else {
+          header.innerHTML = '<span class="text-rose-400">✕ All Selected Tracks Failed</span>';
+        }
+      }
+    }
+
+    async function retryTrack(trackId) {
+      if (!currentJobId) return;
+      try {
+        await fetch(`/api/v1/jobs/${currentJobId}/tracks/${trackId}/retry`, { method: 'POST' });
+      } catch (e) {
+        alert('Retry failed: ' + e.message);
+      }
+    }
+
+    async function autoResolveTrack(trackId) {
+      if (!currentJobId) return;
+      try {
+        await fetch(`/api/v1/jobs/${currentJobId}/tracks/${trackId}/auto-resolve`, { method: 'POST' });
+      } catch (e) {
+        alert('Auto-resolve failed: ' + e.message);
+      }
+    }
+
+    function toggleCustomUrlInput(trackId) {
+      const box = document.getElementById(`custom_url_box_${trackId}`);
+      if (box) box.classList.toggle('hidden');
+    }
+
+    async function substituteCustomUrl(trackId) {
+      if (!currentJobId) return;
+      const input = document.getElementById(`custom_url_input_${trackId}`);
+      const url = input.value.trim();
+      if (!url) return;
+
+      try {
+        await fetch(`/api/v1/jobs/${currentJobId}/tracks/${trackId}/substitute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+      } catch (e) {
+        alert('Substitute URL failed: ' + e.message);
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/[&<>"']/g, function(m) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[m];
+      });
+    }
+  </script>
+</body>
+</html>
