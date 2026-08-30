@@ -1,4 +1,4 @@
-import os
+﻿import os
 import asyncio
 import logging
 from pathlib import Path
@@ -53,20 +53,24 @@ def get_cookies_filepath() -> Optional[str]:
     ]
     for p in render_secret_candidates:
         if p.exists() and p.stat().st_size > 10:
+            logger.info(f"Using Render secret cookies file from {p}")
             return str(p)
 
     # 2. Direct file path from env
     if settings.YOUTUBE_COOKIES_FILE and Path(settings.YOUTUBE_COOKIES_FILE).exists():
+        logger.info(f"Using cookie file from YOUTUBE_COOKIES_FILE: {settings.YOUTUBE_COOKIES_FILE}")
         return settings.YOUTUBE_COOKIES_FILE
 
     # 3. Local cookies.txt file in workspace root
     if settings.COOKIES_TXT_PATH.exists() and settings.COOKIES_TXT_PATH.stat().st_size > 10:
+        logger.info(f"Using local cookies.txt from {settings.COOKIES_TXT_PATH}")
         return str(settings.COOKIES_TXT_PATH)
 
     # 4. Cookies content passed via YOUTUBE_COOKIES env var
     if settings.YOUTUBE_COOKIES and len(settings.YOUTUBE_COOKIES.strip()) > 10:
         target_path = settings.TEMP_DIR / "yt_cookies.txt"
         target_path.write_text(settings.YOUTUBE_COOKIES.strip(), encoding="utf-8")
+        logger.info("Generated temp yt_cookies.txt from YOUTUBE_COOKIES environment variable")
         return str(target_path)
 
     return None
@@ -130,12 +134,11 @@ class MultiPlatformAnalyzerService:
             ydl_opts['cookiefile'] = cookie_file
 
         if is_yt:
-            # Configure headers & client spoofing
+            # When cookie is present, default web client works best
             if client_name:
                 ydl_opts['extractor_args'] = {
                     'youtube': {
                         'player_client': [client_name],
-                        'skip': ['hls', 'dash'] if client_name in ['android_creator', 'ios'] else []
                     }
                 }
             ydl_opts['http_headers'] = {
@@ -153,13 +156,7 @@ class MultiPlatformAnalyzerService:
         info = None
         last_err = None
 
-        # Try client strategies sequentially:
-        # 1. mweb (Mobile web - lightweight and lowest rate limit on cloud IPs)
-        # 2. web (Default desktop client)
-        # 3. ios (iOS app client)
-        # 4. android (Android client)
-        # 5. tv_embedded (YouTube TV embedded)
-        strategies = ['mweb', 'web', 'ios', 'android', 'tv_embedded'] if platform == Platform.YOUTUBE else [None]
+        strategies = [None, 'web', 'mweb', 'android', 'ios', 'tv_embedded'] if platform == Platform.YOUTUBE else [None]
 
         for client in strategies:
             try:
@@ -172,8 +169,7 @@ class MultiPlatformAnalyzerService:
 
         if not info:
             raise ValueError(
-                "YouTube has placed a bot verification check on this server's IP address. "
-                "To resolve this on cloud platforms like Render, export your YouTube cookies using the 'Get cookies.txt LOCALLY' browser extension and set the YOUTUBE_COOKIES environment variable in your Render dashboard."
+                f"YouTube extraction error: {last_err}"
             )
 
         is_playlist = (info.get('_type') == 'playlist' or 'entries' in info) and len(info.get('entries', [])) > 1
